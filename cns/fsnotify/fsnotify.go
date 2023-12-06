@@ -29,7 +29,7 @@ type watcher struct {
 // Create the AsyncDelete watcher.
 func New(cli releaseIPsClient, path string, logger *zap.Logger) *watcher { //nolint
 	// Add directory where intended deletes are kept
-	if err := os.Mkdir(path, 0o755); err != nil { //nolint
+	if err := os.MkdirAll(path, 0o755); err != nil { //nolint
 		logger.Error("error making directory", zap.String("path", path), zap.Error(err))
 	}
 	return &watcher{
