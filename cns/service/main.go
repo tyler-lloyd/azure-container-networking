@@ -642,7 +642,8 @@ func main() {
 			return nil
 		}),
 	}
-	go healthserver.Start(z, cnsconfig.MetricsBindAddress, &healthz.Handler{}, readyChecker)
+	healthzHandler := healthserver.NewHealthzHandlerWithChecks()
+	go healthserver.Start(z, cnsconfig.MetricsBindAddress, healthzHandler, readyChecker)
 
 	nmaConfig, err := nmagent.NewConfig(cnsconfig.WireserverIP)
 	if err != nil {
