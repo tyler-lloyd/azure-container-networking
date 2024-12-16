@@ -200,7 +200,7 @@ func TestNewHealthzHandlerWithChecks(t *testing.T) {
 			healthHandler, err := NewHealthzHandlerWithChecks(tt.cnsConfig)
 			require.NoError(t, err)
 
-			healthHandler.ServeHTTP(responseRecorder, httptest.NewRequest("GET", "/healthz", nil))
+			healthHandler.ServeHTTP(responseRecorder, httptest.NewRequest("GET", "/healthz", http.NoBody))
 
 			require.Equal(t, tt.expectedHealthy, responseRecorder.Code == http.StatusOK)
 		})
@@ -250,7 +250,7 @@ users:
 		return "", fmt.Errorf("failed to create temp kubeconfig file: %w", err)
 	}
 
-	_, err = kubeConfigFile.Write([]byte(tempKubeConfig))
+	_, err = kubeConfigFile.WriteString(tempKubeConfig)
 	if err != nil {
 		return "", fmt.Errorf("failed to write kubeconfig to temp file: %w", err)
 	}
@@ -264,12 +264,18 @@ func setupMockAPIServer(code int) *httptest.Server {
 		// Handle requests based on the path
 		switch r.URL.Path {
 		case "/apis/acn.azure.com/v1alpha":
-			w.Write([]byte(nncCRD))
+			_, err := w.Write([]byte(nncCRD))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 		case "/apis/acn.azure.com/v1alpha/namespaces/kube-system/nodenetworkconfigs":
 			if code == http.StatusOK {
 				w.Header().Set("Cache-Control", "no-cache, private")
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(nncResult))
+				_, err := w.Write([]byte(nncResult))
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 			} else {
 				w.WriteHeader(code)
 			}
