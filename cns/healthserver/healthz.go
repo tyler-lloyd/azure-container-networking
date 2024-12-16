@@ -1,8 +1,11 @@
 package healthserver
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/Azure/azure-container-networking/cns"
+	"github.com/Azure/azure-container-networking/cns/configuration"
 	"github.com/Azure/azure-container-networking/crd/nodenetworkconfig/api/v1alpha"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,26 +16,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
-var schema = runtime.NewScheme()
+var scheme = runtime.NewScheme()
 
 func init() {
-	utilruntime.Must(v1alpha.AddToScheme(schema))
+	utilruntime.Must(v1alpha.AddToScheme(scheme))
 }
 
-func NewHealthzHandlerWithChecks() http.Handler {
+func NewHealthzHandlerWithChecks(cnsConfig *configuration.CNSConfig) http.Handler {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("unable to get config: %w", err))
 	}
 	cli, err := client.New(cfg, client.Options{
-		Scheme: schema,
+		Scheme: scheme,
 	})
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("unable to create client: %w", err))
 	}
 
-	checks := map[string]healthz.Checker{
-		"nnc": func(req *http.Request) error {
+	checks := make(map[string]healthz.Checker)
+	if cnsConfig.ChannelMode == cns.CRD {
+		checks["nnc"] = func(req *http.Request) error {
 			ctx := req.Context()
 			// we just care that we're allowed to List NNCs so set limit to 1 to minimize
 			// additional load on apiserver
@@ -43,7 +47,7 @@ func NewHealthzHandlerWithChecks() http.Handler {
 				return errors.Wrap(err, "failed to list NodeNetworkConfig")
 			}
 			return nil
-		},
+		}
 	}
 
 	// strip prefix so that it runs through all checks registered on the handler.

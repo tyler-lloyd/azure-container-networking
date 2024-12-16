@@ -642,7 +642,8 @@ func main() {
 			return nil
 		}),
 	}
-	healthzHandler := healthserver.NewHealthzHandlerWithChecks()
+
+	healthzHandler := healthserver.NewHealthzHandlerWithChecks(cnsconfig)
 	go healthserver.Start(z, cnsconfig.MetricsBindAddress, healthzHandler, readyChecker)
 
 	nmaConfig, err := nmagent.NewConfig(cnsconfig.WireserverIP)
@@ -982,7 +983,7 @@ func main() {
 		// Start fs watcher here
 		z.Info("AsyncPodDelete is enabled")
 		logger.Printf("AsyncPodDelete is enabled")
-		cnsclient, err := cnsclient.New("", cnsReqTimeout) //nolint
+		cnsclient, err := cnsclient.New("", cnsReqTimeout) // nolint
 		if err != nil {
 			z.Error("failed to create cnsclient", zap.Error(err))
 		}
@@ -1483,7 +1484,7 @@ func InitializeCRDState(ctx context.Context, httpRestService cns.HTTPService, cn
 		// wait for the Reconciler to run once on a NNC that was made for this Node.
 		// the nncReadyCtx has a timeout of 15 minutes, after which we will consider
 		// this false and the NNC Reconciler stuck/failed, log and retry.
-		nncReadyCtx, cancel := context.WithTimeout(ctx, 15*time.Minute) //nolint // it will time out and not leak
+		nncReadyCtx, cancel := context.WithTimeout(ctx, 15*time.Minute) // nolint // it will time out and not leak
 		if started, err := nncReconciler.Started(nncReadyCtx); !started {
 			logger.Errorf("NNC reconciler has not started, does the NNC exist? err: %v", err)
 			nncReconcilerStartFailures.Inc()
