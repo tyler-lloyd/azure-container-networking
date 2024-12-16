@@ -643,7 +643,11 @@ func main() {
 		}),
 	}
 
-	healthzHandler := healthserver.NewHealthzHandlerWithChecks(cnsconfig)
+	healthzHandler, err := healthserver.NewHealthzHandlerWithChecks(cnsconfig)
+	if err != nil {
+		logger.Errorf("unable to initialize a healthz handler: %v", err)
+		return
+	}
 	go healthserver.Start(z, cnsconfig.MetricsBindAddress, healthzHandler, readyChecker)
 
 	nmaConfig, err := nmagent.NewConfig(cnsconfig.WireserverIP)

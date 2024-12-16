@@ -197,7 +197,9 @@ func TestNewHealthzHandlerWithChecks(t *testing.T) {
 			configureLocalAPIServer(t, tt.apiStatusCode)
 
 			responseRecorder := httptest.NewRecorder()
-			healthHandler := NewHealthzHandlerWithChecks(tt.cnsConfig)
+			healthHandler, err := NewHealthzHandlerWithChecks(tt.cnsConfig)
+			require.NoError(t, err)
+
 			healthHandler.ServeHTTP(responseRecorder, httptest.NewRequest("GET", "/healthz", nil))
 
 			require.Equal(t, tt.expectedHealthy, responseRecorder.Code == http.StatusOK)

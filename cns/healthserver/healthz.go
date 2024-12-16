@@ -1,7 +1,6 @@
 package healthserver
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Azure/azure-container-networking/cns"
@@ -22,16 +21,20 @@ func init() {
 	utilruntime.Must(v1alpha.AddToScheme(scheme))
 }
 
-func NewHealthzHandlerWithChecks(cnsConfig *configuration.CNSConfig) http.Handler {
+// NewHealthzHandlerWithChecks will return a [http.Handler] for CNS's /healthz endpoint.
+// Depending on what we expect CNS to be able to read (based on the [configuration.CNSConfig])
+// then the checks registered to the handler will test for those expectations. For example, in
+// ChannelMode: CRD, the health check will ensure that CNS is able to list NNCs successfully.
+func NewHealthzHandlerWithChecks(cnsConfig *configuration.CNSConfig) (http.Handler, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		panic(fmt.Errorf("unable to get config: %w", err))
+		return nil, errors.Wrap(err, "unable to get a kubeconfig")
 	}
 	cli, err := client.New(cfg, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
-		panic(fmt.Errorf("unable to create client: %w", err))
+		return nil, errors.Wrap(err, "unable to create a client")
 	}
 
 	checks := make(map[string]healthz.Checker)
@@ -54,5 +57,5 @@ func NewHealthzHandlerWithChecks(cnsConfig *configuration.CNSConfig) http.Handle
 	// otherwise it will look for a check named "healthz" and return a 404 if not there.
 	return http.StripPrefix("/healthz", &healthz.Handler{
 		Checks: checks,
-	})
+	}), nil
 }
