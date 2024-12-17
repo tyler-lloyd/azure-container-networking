@@ -26,19 +26,19 @@ func init() {
 // then the checks registered to the handler will test for those expectations. For example, in
 // ChannelMode: CRD, the health check will ensure that CNS is able to list NNCs successfully.
 func NewHealthzHandlerWithChecks(cnsConfig *configuration.CNSConfig) (http.Handler, error) {
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to get a kubeconfig")
-	}
-	cli, err := client.New(cfg, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to create a client")
-	}
-
 	checks := make(map[string]healthz.Checker)
 	if cnsConfig.ChannelMode == cns.CRD {
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get kubeconfig")
+		}
+		cli, err := client.New(cfg, client.Options{
+			Scheme: scheme,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to build client")
+		}
+
 		checks["nnc"] = func(req *http.Request) error {
 			ctx := req.Context()
 			// we just care that we're allowed to List NNCs so set limit to 1 to minimize
