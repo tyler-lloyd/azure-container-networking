@@ -267,6 +267,7 @@ func setupMockAPIServer(code int) *httptest.Server {
 			_, err := w.Write([]byte(nncCRD))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		case "/apis/acn.azure.com/v1alpha/namespaces/kube-system/nodenetworkconfigs":
 			if code == http.StatusOK {
@@ -275,6 +276,7 @@ func setupMockAPIServer(code int) *httptest.Server {
 				_, err := w.Write([]byte(nncResult))
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 			} else {
 				w.WriteHeader(code)
