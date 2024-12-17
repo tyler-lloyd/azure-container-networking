@@ -3,6 +3,7 @@ package nodenetworkconfig
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/Azure/azure-container-networking/cns"
 	"github.com/Azure/azure-container-networking/cns/logger"
@@ -43,19 +44,24 @@ type Reconciler struct {
 	once               sync.Once
 	started            chan interface{}
 	nodeIP             string
+	rqa                time.Duration // requeue after
 }
 
 // NewReconciler creates a NodeNetworkConfig Reconciler which will get updates from the Kubernetes
 // apiserver for NNC events.
 // Provided nncListeners are passed the NNC after the Reconcile preprocesses it. Note: order matters! The
 // passed Listeners are notified in the order provided.
-func NewReconciler(cnscli cnsClient, ipampoolmonitorcli nodeNetworkConfigListener, nodeIP string) *Reconciler {
-	return &Reconciler{
+func NewReconciler(cnscli cnsClient, ipampoolmonitorcli nodeNetworkConfigListener, nodeIP string, enableRequeue bool) *Reconciler {
+	r := &Reconciler{
 		cnscli:             cnscli,
 		ipampoolmonitorcli: ipampoolmonitorcli,
 		started:            make(chan interface{}),
 		nodeIP:             nodeIP,
 	}
+	if enableRequeue {
+		r.rqa = 5 * time.Minute
+	}
+	return r
 }
 
 // Reconcile is called on CRD status changes
@@ -139,7 +145,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		close(r.started)
 		logger.Printf("[cns-rc] CNS NNC Reconciler Started")
 	})
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: r.rqa}, nil
 }
 
 // Started blocks until the Reconciler has reconciled at least once,

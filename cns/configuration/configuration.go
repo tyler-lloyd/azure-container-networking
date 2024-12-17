@@ -31,6 +31,7 @@ type CNSConfig struct {
 	EnableIPAMv2                bool
 	EnableK8sDevicePlugin       bool
 	EnablePprof                 bool
+	EnableRequeue               bool
 	EnableStateMigration        bool
 	EnableSubnetScarcity        bool
 	EnableSwiftV2               bool
