@@ -1412,7 +1412,10 @@ func InitializeCRDState(ctx context.Context, httpRestService cns.HTTPService, cn
 	nodeIP := configuration.NodeIP()
 	nncReconciler := nncctrl.NewReconciler(httpRestServiceImplementation, poolMonitor, nodeIP)
 	// pass Node to the Reconciler for Controller xref
-	if err := nncReconciler.SetupWithManager(manager, node, cnsconfig); err != nil { //nolint:govet // intentional shadow
+	// IPAMv1 - reconcile only status changes (where generation doesn't change).
+	// IPAMv2 - reconcile all updates.
+	filterGenerationChange := !cnsconfig.EnableIPAMv2
+	if err := nncReconciler.SetupWithManager(manager, node, filterGenerationChange); err != nil { //nolint:govet // intentional shadow
 		return errors.Wrapf(err, "failed to setup nnc reconciler with manager")
 	}
 

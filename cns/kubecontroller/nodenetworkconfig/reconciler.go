@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/Azure/azure-container-networking/cns"
-	"github.com/Azure/azure-container-networking/cns/configuration"
 	"github.com/Azure/azure-container-networking/cns/logger"
 	"github.com/Azure/azure-container-networking/cns/restserver"
 	cnstypes "github.com/Azure/azure-container-networking/cns/types"
@@ -158,9 +157,10 @@ func (r *Reconciler) Started(ctx context.Context) (bool, error) {
 }
 
 // SetupWithManager Sets up the reconciler with a new manager, filtering using NodeNetworkConfigFilter on nodeName.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, node *v1.Node, cnsconfig *configuration.CNSConfig) error {
+// filterGenerationChange will check the old and new object's generation and only reconcile updates where the
+// generation is the same. This is typically used in IPAMv1 but should be set to false in IPAMv2.
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, node *v1.Node, filterGenerationChange bool) error {
 	r.nnccli = nodenetworkconfig.NewClient(mgr.GetClient())
-	ipamV2Enabled := cnsconfig != nil && cnsconfig.EnableIPAMv2
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha.NodeNetworkConfig{}).
 		WithEventFilter(predicate.Funcs{
@@ -168,16 +168,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, node *v1.Node, cnsconfig
 			DeleteFunc: func(event.DeleteEvent) bool {
 				return false
 			},
-			// check that the generation is the same if IPAMv1 - status changes don't update generation.
 			UpdateFunc: func(ue event.UpdateEvent) bool {
 				if ue.ObjectOld == nil || ue.ObjectNew == nil {
 					return false
 				}
-				// IPAMv2 is idempotent and can process every update event.
-				if ipamV2Enabled {
-					return true
+				if filterGenerationChange {
+					return ue.ObjectOld.GetGeneration() == ue.ObjectNew.GetGeneration()
 				}
-				return ue.ObjectOld.GetGeneration() == ue.ObjectNew.GetGeneration()
+				return true
 			},
 		}).
 		WithEventFilter(predicate.NewPredicateFuncs(func(object client.Object) bool {
